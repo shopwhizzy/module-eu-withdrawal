@@ -46,7 +46,7 @@ class Tabs extends WidgetTabs
         // is not installed the lookup returns null and the tab is
         // silently skipped — same pattern as the precontract_proof tab.
         $auditBlock = $this->getLayout()->getBlock('mageme_eu_withdrawal_audit_listing');
-        if ($auditBlock !== null) {
+        if ($auditBlock) {
             $this->addTab('audit', [
                 'label'   => __('Audit'),
                 'content' => $auditBlock->toHtml(),
@@ -59,7 +59,7 @@ class Tabs extends WidgetTabs
         // tab is silently skipped — the base module's Tabs widget never knows the Pro
         // class name.
         $proofBlock = $this->getLayout()->getBlock('mageme_eu_withdrawal_precontract_proof');
-        if ($proofBlock !== null) {
+        if ($proofBlock) {
             $this->addTab('precontract_proof', [
                 'label'   => __('Pre-Contract Proof'),
                 'content' => $proofBlock->toHtml(),

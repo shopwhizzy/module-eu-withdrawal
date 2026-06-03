@@ -59,7 +59,7 @@ class WaiverEmailRenderer
     {
         $template = $this->emailConfig->getTemplate(EmailConfig::TYPE_WAIVER_CONFIRMATION, $storeId);
         if ($template === '') {
-            $template = 'mageme_eu_withdrawal_notifications_waiver_confirmation_template';
+            $template = 'mageme_eu_withdrawal_digital_waiver_email_template';
         }
         $vars = $this->buildVars($dto, $storeId);
         $bccList = $this->emailConfig->getBccList(EmailConfig::TYPE_WAIVER_CONFIRMATION, $storeId);

@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 namespace MageMe\EUWithdrawal\Block\Withdraw;
 
-use MageMe\EUWithdrawal\Model\Order\LatestShipmentDateResolver;
+use MageMe\EUWithdrawal\Model\Period\DeliveryDateResolver;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
 use Magento\Framework\Stdlib\DateTime\TimezoneInterface;
 use Magento\Framework\View\Element\Template;
@@ -22,14 +22,14 @@ class OrderMeta extends Template
      * @param Context $context
      * @param TimezoneInterface $timezone
      * @param PriceCurrencyInterface $priceCurrency
-     * @param LatestShipmentDateResolver $latestShipment
+     * @param DeliveryDateResolver $deliveryDate
      * @param array $data
      */
     public function __construct(
         Context $context,
         private readonly TimezoneInterface $timezone,
         private readonly PriceCurrencyInterface $priceCurrency,
-        private readonly LatestShipmentDateResolver $latestShipment,
+        private readonly DeliveryDateResolver $deliveryDate,
         array $data = [],
     ) {
         parent::__construct($context, $data);
@@ -79,7 +79,7 @@ class OrderMeta extends Template
         if ($o === null) {
             return '';
         }
-        $raw = $this->latestShipment->resolve((int) $o->getEntityId());
+        $raw = $this->deliveryDate->resolve($o);
         return $raw !== null ? $this->formatUtc($raw) : '';
     }
 
@@ -94,7 +94,7 @@ class OrderMeta extends Template
         if ($o === null) {
             return false;
         }
-        return $this->latestShipment->resolve((int) $o->getEntityId()) === null;
+        return $this->deliveryDate->resolve($o) === null;
     }
 
     /**

@@ -1,7 +1,8 @@
 # MageMe EU Withdrawal for Magento 2
 
-> EU consumer right-of-withdrawal compliance for Magento 2 — Article 11a of
-> the [Consumer Rights Directive (2011/83/EU)](https://eur-lex.europa.eu/eli/dir/2011/83/oj) as amended
+> EU withdrawal button for Magento 2 — the consumer right-of-withdrawal flow
+> required by 19 June 2026 under Article 11a of the
+> [Consumer Rights Directive (2011/83/EU)](https://eur-lex.europa.eu/eli/dir/2011/83/oj) as amended
 > by [Directive (EU) 2023/2673](https://eur-lex.europa.eu/eli/dir/2023/2673/oj).
 
 [![Latest Version](https://img.shields.io/packagist/v/mageme/module-eu-withdrawal.svg?style=flat-square)](https://packagist.org/packages/mageme/module-eu-withdrawal)
@@ -10,7 +11,9 @@
 [![PHP](https://img.shields.io/badge/PHP-8.1%20%7C%208.2%20%7C%208.3%20%7C%208.4%20%7C%208.5-777BB4.svg?style=flat-square)](https://php.net)
 [![License](https://img.shields.io/badge/license-MageMe%20EULA-blue.svg?style=flat-square)](https://mageme.com/license/)
 
-A storefront-ready, guided withdrawal flow — find order, select items, review & confirm — with durable-medium receipt emails and Annex I content in 22 EU locales.
+The Magento 2 withdrawal button your EU storefront needs before the 19 June 2026 deadline — a storefront-ready, guided flow (find order → select items → review & confirm) with durable-medium receipt emails and Annex I content in 22 EU locales, on Luma, Hyvä, and Breeze.
+
+It adds only the legal withdrawal step required under Art. 11a, and works alongside your existing RMA / refund process rather than replacing it.
 
 **[Documentation](https://docs.mageme.com)** · **[Get Pro features](https://mageme.com/magento-2-withdrawal-button-extension.html)**
 
@@ -22,7 +25,7 @@ A storefront-ready, guided withdrawal flow — find order, select items, review 
 
 - **Storefront withdrawal flow** — guided form (find order → select items → review & confirm) for guests and registered customers at `/withdraw-contract/`
 - **Annex I in 22 EU locales** — verbatim EUR-Lex translations where available, theme-overridable per locale
-- **Durable-medium receipt** — confirmation email with content-hash snapshot of the legal text shown to the consumer
+- **Durable-medium receipt** — confirmation email with a frozen snapshot of the legal text shown to the consumer
 - **Admin grid and workflow** — filterable request list, mass actions, status state machine, CSV export
 - **Article 16 exclusions** — preset list configurable per category, with merchant override
 
@@ -30,15 +33,15 @@ A storefront-ready, guided withdrawal flow — find order, select items, review 
 
 **Storefront — guided withdrawal flow** (find order → select items → review & confirm):
 
-![Storefront withdrawal flow — select items to return with per-item quantity](https://mageme.com/media/extensions/eu-withdrawal/storefront-flow.png)
+![Storefront withdrawal flow — select items to withdraw with per-item quantity](https://mageme.com/media/extensions/eu-withdrawal/storefront-flow.png)
 
 **Admin — manage withdrawal requests** (status workflow, jurisdictions, refund totals, CSV export):
 
 ![Admin withdrawal requests grid](https://mageme.com/media/extensions/eu-withdrawal/admin-grid.png)
 
-**Durable-medium receipt email** — content-hash (SHA-256) snapshot with one-click verification:
+**Durable-medium receipt email** — the confirmation sent to the consumer with a frozen snapshot of the legal text they accepted. *(The SHA-256 integrity-hash card and one-click verification shown here are a [Pro](https://mageme.com/magento-2-withdrawal-button-extension.html) add-on.)*
 
-![Durable-medium withdrawal receipt email with SHA-256 integrity hash](https://mageme.com/media/extensions/eu-withdrawal/receipt-email.png)
+![Durable-medium withdrawal receipt email; the SHA-256 integrity-hash card shown is a Pro add-on](https://mageme.com/media/extensions/eu-withdrawal/receipt-email.png)
 
 ## Free vs Pro
 
@@ -67,11 +70,13 @@ bin/magento cache:flush
 
 After installation, enable the module at **Stores → Configuration → MageMe Extensions → EU Withdrawal**.
 
-→ **[Full installation guide and configuration reference](https://docs.mageme.com)**
+→ **[Full installation guide and configuration reference](https://docs.mageme.com/eu-withdrawal/install)**
 
-### Hyva storefront
+On **Luma** and **Breeze** (Swissup) storefronts the base module works out of the box — no extra package required. Only **Hyvä** themes need the companion module below.
 
-If your storefront runs on a Hyva theme, install the theme companion alongside this module — it ports the
+### Hyvä storefront
+
+If your storefront runs on a Hyvä theme, install the theme companion alongside this module — it ports the
 customer-facing withdrawal flow and order-view integrations to Tailwind + Alpine.js:
 
 ```bash
@@ -80,8 +85,8 @@ bin/magento module:enable Hyva_MageMeEUWithdrawal
 bin/magento setup:upgrade
 ```
 
-If you also run **Hyva Checkout**, add the checkout companion as well — it re-implements the pre-contract Annex I block
-and the digital-content waiver step (Art. 16(m)) for Hyva Checkout's Magewire runtime:
+If you also run **Hyvä Checkout**, add the checkout companion as well — it re-implements the pre-contract Annex I block
+and the digital-content waiver step (Art. 16(m)) for Hyvä Checkout's Magewire runtime:
 
 ```bash
 composer require mageme/module-eu-withdrawal-hyva-checkout
@@ -89,7 +94,7 @@ bin/magento module:enable Hyva_MageMeEUWithdrawalCheckout
 bin/magento setup:upgrade
 ```
 
-→ **[Hyva theme companion](https://github.com/mageme/module-eu-withdrawal-hyva)** · **[Hyva Checkout companion](https://github.com/mageme/module-eu-withdrawal-hyva-checkout)**
+→ **[Hyvä theme companion](https://github.com/mageme/module-eu-withdrawal-hyva)** · **[Hyvä Checkout companion](https://github.com/mageme/module-eu-withdrawal-hyva-checkout)**
 
 ## Requirements
 

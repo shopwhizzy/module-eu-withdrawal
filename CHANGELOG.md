@@ -1,3 +1,11 @@
+## 1.0.1
+
++ New: "Show more" in the order picker — load more eligible orders on demand.
+- Fix: Order picker lists newest orders first.
+- Fix: Order picker honours a withdrawal period over 14 days.
+- Fix: Delivered date is consistent between the order list and detail.
+- Fix: Admin request view no longer crashes in the free edition.
+
 ## 1.0.0
 
 + New: First public release. EU right-of-withdrawal management for Magento 2 — a guided customer withdrawal flow (find order, pick items, review, submit), eligibility rules, automatic refund calculation, and durable-medium receipt emails.

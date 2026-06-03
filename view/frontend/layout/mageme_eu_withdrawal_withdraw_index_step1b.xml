@@ -14,7 +14,13 @@
             <block class="MageMe\EUWithdrawal\Block\Withdraw\OrderSelector"
                    name="mageme_eu_withdrawal.order_selector_list"
                    cacheable="false"
-                   template="MageMe_EUWithdrawal::withdraw/step1b_order_list.phtml"/>
+                   template="MageMe_EUWithdrawal::withdraw/step1b_order_list.phtml">
+                <block class="MageMe\EUWithdrawal\Block\Withdraw\OrderSelector"
+                       name="mageme_eu_withdrawal.order_rows"
+                       as="order_rows"
+                       cacheable="false"
+                       template="MageMe_EUWithdrawal::withdraw/step1b_orders_rows.phtml"/>
+            </block>
         </referenceContainer>
     </body>
 </page>

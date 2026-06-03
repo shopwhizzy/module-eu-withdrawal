@@ -265,6 +265,10 @@
 
 // ---- Step 1b order list ----
 .mm-eu-w-order-list { list-style: none; padding: 0; margin: 0; }
+.mm-eu-w-load-more { display: flex; justify-content: center; margin-top: 20px; }
+.column.main .mm-eu-w-btn--loading { opacity: 0.6; pointer-events: none; }
+.mm-eu-w-spinner { display: none; width: 16px; height: 16px; margin-right: 8px; }
+.mm-eu-w-btn--loading .mm-eu-w-spinner { display: inline-flex; }
 .mm-eu-w-order-row {
     display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
     padding: 20px 0; border-top: 1px solid @mm-eu-w-border;

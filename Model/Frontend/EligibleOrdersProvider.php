@@ -8,83 +8,137 @@ declare(strict_types=1);
 namespace MageMe\EUWithdrawal\Model\Frontend;
 
 use MageMe\EUWithdrawal\Model\Customer\OrderWithdrawalBadgeService;
-use MageMe\EUWithdrawal\Model\Order\LatestShipmentDateResolver;
+use MageMe\EUWithdrawal\Model\Frontend\Dto\EligibleOrdersPage;
+use MageMe\EUWithdrawal\Model\Period\DeliveryDateResolver;
 use Magento\Framework\Api\SearchCriteriaBuilder;
+use Magento\Framework\Api\SortOrder;
+use Magento\Framework\Api\SortOrderBuilder;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Sales\Api\Data\OrderInterface;
 use Magento\Sales\Api\OrderRepositoryInterface;
 use Magento\Sales\Model\Order;
+use Magento\Store\Model\ScopeInterface;
+use Psr\Log\LoggerInterface;
 
 class EligibleOrdersProvider
 {
-    private const WITHDRAWAL_WINDOW_DAYS = 14;
+    public const DEFAULT_LIMIT = 20;
+    public const LIMIT_STEP = 20;
+    public const MAX_LIMIT = 200;
 
-    /**
-     * Constructor.
-     *
-     * @param SearchCriteriaBuilder $searchCriteriaBuilder
-     * @param OrderRepositoryInterface $orderRepository
-     * @param LatestShipmentDateResolver $latestShipmentDate
-     * @param OrderWithdrawalBadgeService $badgeService
-     * @param OrderEligibilityResolver $eligibilityResolver
-     */
+    private const WITHDRAWAL_WINDOW_DAYS = 14;
+    private const XML_PERIOD_DAYS = 'mageme_eu_withdrawal/withdrawal_window/period_days';
+    private const SCAN_PAGE_SIZE = 100;
+    private const MAX_SCAN_ORDERS = 1000;
+
     public function __construct(
         private readonly SearchCriteriaBuilder $searchCriteriaBuilder,
         private readonly OrderRepositoryInterface $orderRepository,
-        private readonly LatestShipmentDateResolver $latestShipmentDate,
+        private readonly DeliveryDateResolver $deliveryDate,
         private readonly OrderWithdrawalBadgeService $badgeService,
         private readonly OrderEligibilityResolver $eligibilityResolver,
+        private readonly SortOrderBuilder $sortOrderBuilder,
+        private readonly LoggerInterface $logger,
+        private readonly ScopeConfigInterface $scopeConfig,
     ) {
     }
 
     /**
-     * @return OrderInterface[]
+     * Newest-first page of the customer's withdrawal-eligible orders.
+     *
+     * Eligibility is decided per order in PHP, so the query is paged from the
+     * top (created_at DESC) and filtered until $limit eligible are collected,
+     * one extra is peeked to report `hasMore`, the order history is exhausted,
+     * or the safety scan cap is reached.
      */
-    public function forCustomer(int $customerId, int $limit = 20): array
+    public function forCustomer(int $customerId, int $limit = self::DEFAULT_LIMIT): EligibleOrdersPage
     {
         if ($customerId <= 0) {
-            return [];
+            return new EligibleOrdersPage([], false);
         }
+
+        $want = $limit + 1;
+        $periodDays = max(
+            self::WITHDRAWAL_WINDOW_DAYS,
+            (int) $this->scopeConfig->getValue(self::XML_PERIOD_DAYS, ScopeInterface::SCOPE_STORE),
+        );
+        $cutoff = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
+            ->modify('-' . $periodDays . ' days')
+            ->format('Y-m-d H:i:s');
+
+        $eligible = [];
+        $scanned = 0;
+        $page = 1;
+        while (count($eligible) < $want && $scanned < self::MAX_SCAN_ORDERS) {
+            $orders = $this->fetchOrderPage($customerId, $page);
+            if ($orders === []) {
+                break;
+            }
+            $scanned += count($orders);
+            $this->collectEligible($orders, $cutoff, $want, $eligible);
+            if (count($orders) < self::SCAN_PAGE_SIZE) {
+                break;
+            }
+            $page++;
+        }
+
+        if (count($eligible) < $want && $scanned >= self::MAX_SCAN_ORDERS) {
+            $this->logger->warning(
+                'EUWithdrawal eligible-orders scan reached the safety cap before satisfying the request',
+                ['customer_id' => $customerId, 'scanned' => $scanned, 'limit' => $limit],
+            );
+        }
+
+        return new EligibleOrdersPage(array_slice($eligible, 0, $limit), count($eligible) > $limit);
+    }
+
+    /** @return OrderInterface[] */
+    private function fetchOrderPage(int $customerId, int $page): array
+    {
+        $newestFirst = $this->sortOrderBuilder
+            ->setField('created_at')
+            ->setDirection(SortOrder::SORT_DESC)
+            ->create();
 
         $criteria = $this->searchCriteriaBuilder
             ->addFilter('customer_id', $customerId)
             ->addFilter('state', [Order::STATE_CANCELED, Order::STATE_CLOSED], 'nin')
-            ->setPageSize(100)
-            ->setCurrentPage(1)
+            ->setSortOrders([$newestFirst])
+            ->setPageSize(self::SCAN_PAGE_SIZE)
+            ->setCurrentPage($page)
             ->create();
 
-        $items = $this->orderRepository->getList($criteria)->getItems();
-        $items = array_values($items);
+        return array_values($this->orderRepository->getList($criteria)->getItems());
+    }
 
-        $ids = array_map(static fn (OrderInterface $o) => (int) $o->getEntityId(), $items);
+    /**
+     * @param OrderInterface[] $orders
+     * @param OrderInterface[] $eligible accumulator, mutated in place
+     */
+    private function collectEligible(array $orders, string $cutoff, int $want, array &$eligible): void
+    {
+        $ids = array_map(static fn (OrderInterface $o) => (int) $o->getEntityId(), $orders);
         $badges = $this->badgeService->getBadges($ids);
 
-        $cutoff = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
-            ->modify('-' . self::WITHDRAWAL_WINDOW_DAYS . ' days')
-            ->format('Y-m-d H:i:s');
-
-        $eligible = [];
-        foreach ($items as $order) {
+        foreach ($orders as $order) {
+            if (count($eligible) >= $want) {
+                return;
+            }
             $id = (int) $order->getEntityId();
             if (($badges[$id] ?? null) === OrderWithdrawalBadgeService::BADGE_FULL) {
                 continue;
             }
-            $shipDate = $this->latestShipmentDate->resolve($id);
-            if ($shipDate !== null && $shipDate < $cutoff) {
+            // Drop orders delivered before the window opened. A null delivered-at
+            // (not yet delivered, or no delivery status configured and no shipment)
+            // keeps an unstarted clock — the order stays listed.
+            $deliveredAt = $this->deliveryDate->resolve($order);
+            if ($deliveredAt !== null && $deliveredAt < $cutoff) {
                 continue;
             }
-            // Filter out orders that are excluded under Art. 16 (custom-made,
-            // perishable, fully-consumed digital, etc.) or have no remaining
-            // capacity (everything already withdrawn). `hasRemainingCapacity`
-            // is the same flag the order-view section uses to decide whether
-            // to show the Start-withdrawal button.
             if (!$this->eligibilityResolver->isEligibleForOrder($order)) {
                 continue;
             }
             $eligible[] = $order;
-            if (count($eligible) >= $limit) {
-                break;
-            }
         }
-        return $eligible;
     }
 }

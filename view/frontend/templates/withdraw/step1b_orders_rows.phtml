@@ -1,0 +1,66 @@
+<?php
+/**
+ * Copyright © MageMe. All rights reserved.
+ * See LICENSE for license terms, or https://mageme.com/license.
+ */
+/** @var \MageMe\EUWithdrawal\Block\Withdraw\OrderSelector $block */
+/** @var \Magento\Framework\Escaper $escaper */
+$svgPackage = '<svg class="mm-eu-w-thumb-fallback-svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-4 9 4v10l-9 4-9-4z"/><polyline points="3 9 12 13 21 9"/><line x1="12" y1="13" x2="12" y2="22"/></svg>';
+?>
+<?php foreach ($block->getOrders() as $order): ?>
+    <?php $tns = $block->getItemThumbnails($order);
+    $extra = $block->getExtraItemCount($order); ?>
+    <li class="mm-eu-w-order-row">
+        <div class="mm-eu-w-order-thumbs">
+            <?php foreach ($tns as $idx => $tn): ?>
+                <div class="mm-eu-w-order-thumb">
+                    <?php if ($tn['url'] !== ''): ?>
+                        <img src="<?= $escaper->escapeUrl($tn['url']) ?>"
+                             alt="<?= $escaper->escapeHtmlAttr($tn['alt']) ?>">
+                    <?php else: ?>
+                        <span class="mm-eu-w-thumb-fallback" aria-hidden="true"><?= /* @noEscape */ $svgPackage ?></span>
+                    <?php endif; ?>
+                    <?php if ($idx === count($tns) - 1 && $extra > 0): ?>
+                        <span class="mm-eu-w-thumb-overlay">
+                            +<?= (int) $extra ?> <?= $escaper->escapeHtml(__('items')) ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <div class="mm-eu-w-order-meta">
+            <div class="mm-eu-w-order-number">
+                <?= $escaper->escapeHtml(__('Order #%1', $block->getOrderIncrementId($order))) ?>
+            </div>
+            <div class="mm-eu-w-order-dates">
+                <?= $escaper->escapeHtml(__('Placed on %1', $block->formatOrderDate($order))) ?>
+                <?php $delivered = $block->formatDeliveryDate($order); ?>
+                <?php if ($delivered !== ''): ?>
+                    · <?= $escaper->escapeHtml(__('Delivered on %1', $delivered)) ?>
+                <?php else: ?>
+                    · <?= $escaper->escapeHtml(__('Awaiting delivery')) ?>
+                <?php endif; ?>
+            </div>
+        </div>
+        <div class="mm-eu-w-order-total">
+            <div class="mm-eu-w-order-total-amount">
+                <?= $escaper->escapeHtml($block->formatOrderTotal($order)) ?>
+            </div>
+            <div class="mm-eu-w-order-shipping">
+                <?= $escaper->escapeHtml($block->getShippingMethodLabel($order)) ?>
+            </div>
+        </div>
+        <div class="mm-eu-w-order-action">
+            <a class="mm-eu-w-btn mm-eu-w-btn--select-order"
+               href="<?= $escaper->escapeUrl($block->getStep2Url($order)) ?>">
+                <span><?= $escaper->escapeHtml(__('Select order')) ?></span>
+                <svg class="mm-eu-w-btn-arrow" viewBox="0 0 16 16" width="16" height="16"
+                     aria-hidden="true" focusable="false" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="8" x2="13" y2="8"/>
+                    <polyline points="8,3 13,8 8,13"/>
+                </svg>
+            </a>
+        </div>
+    </li>
+<?php endforeach; ?>

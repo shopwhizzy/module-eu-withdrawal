@@ -107,7 +107,7 @@ $statusBadgeLabel = \MageMe\EUWithdrawal\Model\Request\Source\Status::labelFor($
                    notes block — Free stays add-on-agnostic. Absent in Free. */
                 $summaryActions = $block->getLayout()->getBlock('mageme_eu_withdrawal_request_summary_actions');
                 ?>
-                <?php if ($summaryActions !== null): ?>
+                <?php if ($summaryActions): ?>
                     <?= /* @noEscape */ $summaryActions->toHtml() ?>
                 <?php endif; ?>
             </div>
@@ -238,13 +238,13 @@ $statusBadgeLabel = \MageMe\EUWithdrawal\Model\Request\Source\Status::labelFor($
    Absent in Free (graceful: section shows only Refund Totals). */
 $notesBlock = $block->getLayout()->getBlock('mageme_eu_withdrawal_request_notes');
 ?>
-<?php if ($notesBlock !== null || !empty($items)): ?>
+<?php if ($notesBlock || !empty($items)): ?>
 <section class="admin__page-section">
     <div class="admin__page-section-title">
         <span class="title"><?= $escaper->escapeHtml(__('Refund Total')) ?></span>
     </div>
     <div class="admin__page-section-content">
-        <?php if ($notesBlock !== null): ?>
+        <?php if ($notesBlock): ?>
             <?= /* @noEscape */ $notesBlock->toHtml() ?>
         <?php endif; ?>
 

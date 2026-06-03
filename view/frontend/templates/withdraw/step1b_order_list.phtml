@@ -8,7 +8,6 @@
 $orders = $block->getOrders();
 
 $svgInfo = '<svg class="mm-eu-w-banner-icon-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r="1" fill="currentColor" stroke="none"/></svg>';
-$svgPackage = '<svg class="mm-eu-w-thumb-fallback-svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-4 9 4v10l-9 4-9-4z"/><polyline points="3 9 12 13 21 9"/><line x1="12" y1="13" x2="12" y2="22"/></svg>';
 ?>
 <section class="mm-eu-w-step1b">
     <div class="mm-eu-w-card">
@@ -28,65 +27,24 @@ $svgPackage = '<svg class="mm-eu-w-thumb-fallback-svg" viewBox="0 0 24 24" width
                 </a>
             </div>
         <?php else: ?>
-            <ul class="mm-eu-w-order-list">
-                <?php foreach ($orders as $order): ?>
-                    <?php $tns = $block->getItemThumbnails($order);
-                    $extra = $block->getExtraItemCount($order); ?>
-                    <li class="mm-eu-w-order-row">
-                        <div class="mm-eu-w-order-thumbs">
-                            <?php foreach ($tns as $idx => $tn): ?>
-                                <div class="mm-eu-w-order-thumb">
-                                    <?php if ($tn['url'] !== ''): ?>
-                                        <img src="<?= $escaper->escapeUrl($tn['url']) ?>"
-                                             alt="<?= $escaper->escapeHtmlAttr($tn['alt']) ?>">
-                                    <?php else: ?>
-                                        <span class="mm-eu-w-thumb-fallback" aria-hidden="true"><?= /* @noEscape */ $svgPackage ?></span>
-                                    <?php endif; ?>
-                                    <?php if ($idx === count($tns) - 1 && $extra > 0): ?>
-                                        <span class="mm-eu-w-thumb-overlay">
-                                            +<?= (int) $extra ?> <?= $escaper->escapeHtml(__('items')) ?>
-                                        </span>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                        <div class="mm-eu-w-order-meta">
-                            <div class="mm-eu-w-order-number">
-                                <?= $escaper->escapeHtml(__('Order #%1', $block->getOrderIncrementId($order))) ?>
-                            </div>
-                            <div class="mm-eu-w-order-dates">
-                                <?= $escaper->escapeHtml(__('Placed on %1', $block->formatOrderDate($order))) ?>
-                                <?php $delivered = $block->formatDeliveryDate($order); ?>
-                                <?php if ($delivered !== ''): ?>
-                                    · <?= $escaper->escapeHtml(__('Delivered on %1', $delivered)) ?>
-                                <?php else: ?>
-                                    · <?= $escaper->escapeHtml(__('Awaiting delivery')) ?>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        <div class="mm-eu-w-order-total">
-                            <div class="mm-eu-w-order-total-amount">
-                                <?= $escaper->escapeHtml($block->formatOrderTotal($order)) ?>
-                            </div>
-                            <div class="mm-eu-w-order-shipping">
-                                <?= $escaper->escapeHtml($block->getShippingMethodLabel($order)) ?>
-                            </div>
-                        </div>
-                        <div class="mm-eu-w-order-action">
-                            <a class="mm-eu-w-btn mm-eu-w-btn--select-order"
-                               href="<?= $escaper->escapeUrl($block->getStep2Url($order)) ?>">
-                                <span><?= $escaper->escapeHtml(__('Select order')) ?></span>
-                                <svg class="mm-eu-w-btn-arrow" viewBox="0 0 16 16" width="16" height="16"
-                                     aria-hidden="true" focusable="false" fill="none" stroke="currentColor"
-                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="3" y1="8" x2="13" y2="8"/>
-                                    <polyline points="8,3 13,8 8,13"/>
-                                </svg>
-                            </a>
-                        </div>
-                    </li>
-                <?php endforeach; ?>
+            <ul id="mm-eu-w-order-list" class="mm-eu-w-order-list" data-role="order-list">
+                <?= /* @noEscape */ $block->getChildHtml('order_rows') ?>
             </ul>
+            <?php if ($block->canLoadMore()): ?>
+                <div class="mm-eu-w-load-more" data-role="load-more-wrap">
+                    <a class="mm-eu-w-btn mm-eu-w-btn--outlined"
+                       data-role="load-more"
+                       href="<?= $escaper->escapeUrl($block->getLoadMoreUrl()) ?>"
+                       data-endpoint="<?= $escaper->escapeUrl($block->getLoadMoreEndpoint()) ?>">
+                        <svg class="mm-eu-w-spinner" viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="40 60">
+                                <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.7s" repeatCount="indefinite"/>
+                            </circle>
+                        </svg>
+                        <span><?= $escaper->escapeHtml(__('Show more orders')) ?></span>
+                    </a>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
     <div class="mm-eu-w-banner mm-eu-w-banner--info">
@@ -96,3 +54,6 @@ $svgPackage = '<svg class="mm-eu-w-thumb-fallback-svg" viewBox="0 0 24 24" width
         </span>
     </div>
 </section>
+<script type="text/javascript"
+        src="<?= $escaper->escapeUrl($block->getViewFileUrl('MageMe_EUWithdrawal::js/load-more-orders.js')) ?>"
+        defer></script>

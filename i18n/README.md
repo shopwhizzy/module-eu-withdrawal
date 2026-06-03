@@ -1,13 +1,11 @@
 # i18n CSVs — translation provenance
 
-All non-en_US CSV files are AI-drafted from the en_US source as of 2026-04-29.
-They have NOT been reviewed by counsel.
+Non-en_US CSV files are AI-drafted from the en_US source and have not been
+reviewed by counsel.
 
 **Merchant responsibility:** review legal-language strings (Art. 16 / Art. 14
 / Art. 11a CRD references) for your store's target jurisdictions with local
-counsel BEFORE production deployment.
-
-Counsel sign-off deadline (Free release gate): 2026-05-15.
+counsel before production deployment.
 
 The strings inside the receipt / Annex I durable-medium content are
 exception cases — those are sourced verbatim from EUR-Lex CELEX 32011L0083
@@ -28,24 +26,12 @@ chain (e.g. de_AT → de_DE → en_US).
 
 ## Coverage notes
 
-Each CSV contains all 655 master rows. Where a high-quality translation
-was available it was applied; for long admin help-text strings (system.xml
-field descriptions, internal error messages, advanced developer-facing
-text) the row falls through to the English source. Magento's `__()`
-loader silently passes through identical en_source / translation pairs,
-so the UI behaves correctly — admin staff using non-English locales will
-simply see admin help text in English while customer-facing UI remains
-fully localised.
-
-The translation coverage per locale (number of rows where translation
-differs from English source) is approximately:
-
-- de_DE, fr_FR, es_ES, it_IT, nl_NL, pt_PT, pl_PL, sv_SE, da_DK, fi_FI:
-  ~200–390 translated rows (existing curated translations preserved +
-  ~150–250 fresh translations)
-- 11 NEW locales (bg_BG, cs_CZ, el_GR, et_EE, hr_HR, hu_HU, lt_LT, lv_LV,
-  ro_RO, sk_SK, sl_SI): ~170 translated rows each (fresh AI translations
-  for the highest-impact UI strings)
+Each CSV carries the full set of master rows. Customer-facing UI strings are
+translated; long admin help-text (system.xml field descriptions, internal
+error messages, developer-facing text) falls through to the English source.
+Magento's `__()` loader silently passes through identical en_source /
+translation pairs, so admin staff on non-English locales simply see admin
+help text in English while the customer-facing UI remains fully localised.
 
 ## Placeholder safety
 
@@ -53,3 +39,20 @@ Every translation has been validated to preserve the same set of
 placeholder tokens (`%1`, `%2`, `%name`, `%order_increment_id`,
 `{period_days}`, etc.) as the English source — `__()` substitution is
 guaranteed to work in every locale.
+
+## Email-template localisation
+
+Transactional emails are NOT localised with per-locale HTML files. Each
+notification is a single canonical template under `view/frontend/email/`
+(and `view/adminhtml/email/` for the admin and DLQ alerts), registered in
+`etc/email_templates.xml`. Magento resolves the registered `file=` attribute
+relative to `view/<area>/email/` only.
+
+Localisation happens at send time: the `{{trans "..."}}` directives inside
+those templates are resolved against the CSVs in this folder for the store's
+configured locale — the same dictionaries that drive the UI strings. Country
+variants (de_AT, fr_BE, …) inherit their parent-language email strings through
+the same `MergeParentLanguageStrings` fallback chain.
+
+To localise an email, translate the matching `{{trans}}` source rows in the
+locale CSV. There is nothing else to add per locale.

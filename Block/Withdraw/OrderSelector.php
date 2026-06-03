@@ -8,8 +8,9 @@ declare(strict_types=1);
 namespace MageMe\EUWithdrawal\Block\Withdraw;
 
 use MageMe\EUWithdrawal\Model\Customer\OrderWithdrawalBadgeService;
+use MageMe\EUWithdrawal\Model\Frontend\Dto\EligibleOrdersPage;
 use MageMe\EUWithdrawal\Model\Frontend\EligibleOrdersProvider;
-use MageMe\EUWithdrawal\Model\Order\LatestShipmentDateResolver;
+use MageMe\EUWithdrawal\Model\Period\DeliveryDateResolver;
 use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
 use Magento\Framework\Stdlib\DateTime\TimezoneInterface;
@@ -20,6 +21,8 @@ use Magento\Sales\Api\Data\OrderItemInterface;
 
 class OrderSelector extends Template
 {
+    private ?EligibleOrdersPage $page = null;
+
     /**
      * Constructor.
      *
@@ -27,7 +30,7 @@ class OrderSelector extends Template
      * @param CustomerSession $customerSession
      * @param EligibleOrdersProvider $eligibleOrders
      * @param ProductThumbnail $thumbnail
-     * @param LatestShipmentDateResolver $latestShipment
+     * @param DeliveryDateResolver $deliveryDate
      * @param TimezoneInterface $timezone
      * @param PriceCurrencyInterface $priceCurrency
      * @param OrderWithdrawalBadgeService $badgeService
@@ -38,7 +41,7 @@ class OrderSelector extends Template
         private readonly CustomerSession $customerSession,
         private readonly EligibleOrdersProvider $eligibleOrders,
         private readonly ProductThumbnail $thumbnail,
-        private readonly LatestShipmentDateResolver $latestShipment,
+        private readonly DeliveryDateResolver $deliveryDate,
         private readonly TimezoneInterface $timezone,
         private readonly PriceCurrencyInterface $priceCurrency,
         private readonly OrderWithdrawalBadgeService $badgeService,
@@ -61,10 +64,69 @@ class OrderSelector extends Template
     /** @return OrderInterface[] */
     public function getOrders(): array
     {
-        if (!$this->isCustomerLoggedIn()) {
-            return [];
+        return $this->page()->orders;
+    }
+
+    /**
+     * Whether a "Show more" control should be rendered.
+     *
+     * @return bool
+     */
+    public function canLoadMore(): bool
+    {
+        return $this->page()->hasMore && $this->getShowLimit() < EligibleOrdersProvider::MAX_LIMIT;
+    }
+
+    /**
+     * URL that reveals the next batch of eligible orders.
+     *
+     * @return string
+     */
+    public function getLoadMoreUrl(): string
+    {
+        $next = min(
+            EligibleOrdersProvider::MAX_LIMIT,
+            $this->getShowLimit() + EligibleOrdersProvider::LIMIT_STEP,
+        );
+        return $this->getUrl('withdraw-contract', [
+            '_query' => ['show' => $next],
+            '_fragment' => 'mm-eu-w-order-list',
+        ]);
+    }
+
+    /**
+     * AJAX endpoint that returns the next batch of eligible-order rows.
+     *
+     * @return string
+     */
+    public function getLoadMoreEndpoint(): string
+    {
+        $next = min(
+            EligibleOrdersProvider::MAX_LIMIT,
+            $this->getShowLimit() + EligibleOrdersProvider::LIMIT_STEP,
+        );
+        return $this->getUrl('withdraw-contract/withdraw/orders', ['_query' => ['show' => $next]]);
+    }
+
+    private function page(): EligibleOrdersPage
+    {
+        if ($this->page !== null) {
+            return $this->page;
         }
-        return $this->eligibleOrders->forCustomer((int) $this->customerSession->getCustomerId());
+        if (!$this->isCustomerLoggedIn()) {
+            return $this->page = new EligibleOrdersPage([], false);
+        }
+        return $this->page = $this->eligibleOrders->forCustomer(
+            (int) $this->customerSession->getCustomerId(),
+            $this->getShowLimit(),
+        );
+    }
+
+    private function getShowLimit(): int
+    {
+        $raw = (int) $this->getRequest()->getParam('show', EligibleOrdersProvider::DEFAULT_LIMIT);
+        $snapped = intdiv(max(0, $raw), EligibleOrdersProvider::LIMIT_STEP) * EligibleOrdersProvider::LIMIT_STEP;
+        return max(EligibleOrdersProvider::DEFAULT_LIMIT, min(EligibleOrdersProvider::MAX_LIMIT, $snapped));
     }
 
     /**
@@ -134,7 +196,7 @@ class OrderSelector extends Template
      */
     public function formatDeliveryDate(OrderInterface $order): string
     {
-        $raw = $this->latestShipment->resolve((int) $order->getEntityId());
+        $raw = $this->deliveryDate->resolve($order);
         if ($raw === null) {
             return '';
         }
