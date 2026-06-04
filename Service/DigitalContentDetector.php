@@ -104,12 +104,53 @@ class DigitalContentDetector
         }
         $out = [];
         foreach ($items as $item) {
-            $product = $item->getProduct();
-            if ($product instanceof ProductInterface && $this->isDigitalProduct($product)) {
+            if ($this->isDigitalItem($item)) {
                 $out[] = $item;
             }
         }
         return $out;
+    }
+
+    /**
+     * Whether a cart/order line counts as digital: its own product, or — when the
+     * `bundle_contains_digital` strategy is enabled — any child of a composite line.
+     *
+     * @param \Magento\Quote\Model\Quote\Item|\Magento\Sales\Model\Order\Item $item
+     * @return bool
+     */
+    public function isDigitalItem($item): bool
+    {
+        $product = $item->getProduct();
+        if ($product instanceof ProductInterface && $this->isDigitalProduct($product)) {
+            return true;
+        }
+        if (!in_array(self::STRATEGY_BUNDLE, $this->strategies(), true)) {
+            return false;
+        }
+        foreach ($this->childItems($item) as $child) {
+            $childProduct = $child->getProduct();
+            if ($childProduct instanceof ProductInterface && $this->isDigitalProduct($childProduct)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Child lines of a composite quote or order line (bundle / configurable).
+     *
+     * @param \Magento\Quote\Model\Quote\Item|\Magento\Sales\Model\Order\Item $item
+     * @return array<int, mixed>
+     */
+    private function childItems($item): array
+    {
+        if (method_exists($item, 'getChildren') && $item->getChildren()) {
+            return $item->getChildren();
+        }
+        if (method_exists($item, 'getChildrenItems') && $item->getChildrenItems()) {
+            return $item->getChildrenItems();
+        }
+        return [];
     }
 
     /** @return string[] */

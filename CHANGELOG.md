@@ -1,3 +1,12 @@
+## 1.0.2
+
++ New: Digital-content detection can now recognise digital items inside bundle products.
+- Fix: Submission confirmation email and the merchant copy now also send for requests made through the storefront app.
+- Fix: The store logo now appears in withdrawal emails.
+- Fix: Email USP and social icons now display in Gmail, Outlook and Yahoo.
+- Fix: Withdrawal emails are sent in the store's language instead of always English.
+* Other: Storefront-app submissions now go through the same rate-limiting and audit logging as the form.
+
 ## 1.0.1
 
 + New: "Show more" in the order picker — load more eligible orders on demand.

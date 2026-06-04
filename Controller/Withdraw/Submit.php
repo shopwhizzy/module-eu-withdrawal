@@ -21,8 +21,8 @@ use Magento\Framework\App\Request\InvalidRequestException;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\Result\RedirectFactory;
 use Magento\Framework\Controller\ResultInterface;
+use Magento\Framework\Locale\ResolverInterface as LocaleResolverInterface;
 use Magento\Framework\Message\ManagerInterface as MessageManager;
-use Magento\Store\Model\StoreManagerInterface;
 
 class Submit implements HttpPostActionInterface, CsrfAwareActionInterface
 {
@@ -35,7 +35,7 @@ class Submit implements HttpPostActionInterface, CsrfAwareActionInterface
      * @param RequestCreator $requestCreator
      * @param AntiEnumeration $antiEnumeration
      * @param CustomerSession $customerSession
-     * @param StoreManagerInterface $storeManager
+     * @param LocaleResolverInterface $localeResolver
      * @param ResponseTimer $responseTimer
      * @param ReasonsConfigReader $reasonsConfig
      */
@@ -46,7 +46,7 @@ class Submit implements HttpPostActionInterface, CsrfAwareActionInterface
         private readonly RequestCreator $requestCreator,
         private readonly AntiEnumeration $antiEnumeration,
         private readonly CustomerSession $customerSession,
-        private readonly StoreManagerInterface $storeManager,
+        private readonly LocaleResolverInterface $localeResolver,
         private readonly ResponseTimer $responseTimer,
         private readonly ReasonsConfigReader $reasonsConfig,
     ) {
@@ -98,14 +98,13 @@ class Submit implements HttpPostActionInterface, CsrfAwareActionInterface
 
         $itemReasons = $this->parseItemReasons(array_keys($items));
 
-        $store = $this->storeManager->getStore();
         $input = new CreateRequestInput(
             orderIncrementId: $orderId,
             customerName: $name,
             customerEmail: $email,
             reasonText: null,
-            jurisdiction: (string) $store->getCode(),
-            locale: (string) $store->getCode(),
+            jurisdiction: 'EU',
+            locale: (string) $this->localeResolver->getLocale(),
             ip: (string) $this->request->getClientIp(),
             userAgent: (string) $this->request->getServer('HTTP_USER_AGENT'),
             customerId: $this->customerSession->isLoggedIn()

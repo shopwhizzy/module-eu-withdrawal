@@ -38,17 +38,49 @@ class AntiEnumeration
     }
 
     /**
+     * Legacy form-post entry point: runs the shared create pipeline and maps
+     * its outcome to a uniform redirect response.
+     *
      * @param callable(CreateRequestInput): CreateRequestResult $action
      */
     public function handle(CreateRequestInput $input, callable $action): UniformResponse
+    {
+        try {
+            $result = $this->process($input, $action);
+        } catch (\Throwable $e) {
+            $this->logger->warning(
+                'EUWithdrawal submit threw: ' . $e->getMessage(),
+                ['ip_hash' => $this->hashIp($input->ip ?? '')],
+            );
+            $this->audit($this->hashIp($input->ip ?? ''), 'error');
+            return UniformResponse::uniform();
+        }
+
+        if ($result === null || !$result->isSuccess()) {
+            return UniformResponse::uniform();
+        }
+
+        return UniformResponse::redirect('withdraw-contract/withdraw/success', []);
+    }
+
+    /**
+     * Shared enumeration-safe create pipeline for both the form-post and the
+     * SPA/JSON controllers. Enforces the rate-limit gate, audits the outcome,
+     * and on success sends the submission notification and records the session
+     * marker. Returns the create result, or null when the request was throttled
+     * before the action ran; domain exceptions from $action propagate so the
+     * caller can map them to its own response.
+     *
+     * @param CreateRequestInput $input
+     * @param callable(CreateRequestInput): CreateRequestResult $action
+     * @return ?CreateRequestResult
+     */
+    public function process(CreateRequestInput $input, callable $action): ?CreateRequestResult
     {
         $ipHash = $this->hashIp($input->ip ?? '');
 
         if (!$this->rateLimiter->allow($ipHash)) {
             $this->audit($ipHash, 'rate_limited');
-            // Dedicated throttle event for the audit log (Pro OnRateLimitHit
-            // consumes it). Payload keys match RateLimitHitPayload::build; the
-            // already-hashed IP is passed (no raw IP at this layer).
             $this->eventManager->dispatch(
                 'mageme_eu_withdrawal_anti_enumeration_throttled',
                 [
@@ -58,54 +90,52 @@ class AntiEnumeration
                     'window_seconds' => $this->rateLimiter->getWindowSeconds(),
                 ],
             );
-            return UniformResponse::uniform();
+            return null;
         }
 
-        try {
-            $result = $action($input);
-        } catch (\Throwable $e) {
-            $this->logger->warning(
-                'EUWithdrawal submit threw: ' . $e->getMessage(),
-                ['ip_hash' => $ipHash],
-            );
-            $this->audit($ipHash, 'error');
-            return UniformResponse::uniform();
-        }
+        $result = $action($input);
 
         $this->audit($ipHash, $result->isSuccess() ? 'accepted' : 'silent_failure');
 
-        if (!$result->isSuccess()) {
-            return UniformResponse::uniform();
+        if ($result->isSuccess()) {
+            $this->notify($input, $result);
+            $this->withdrawalSession->setLastWithdrawalRequestId((int) $result->getRequestId());
         }
 
-        // The request was already created in the `submitted` state (RequestCreator
-        // does everything in one transaction). Send the notification ack and
-        // redirect to success — withdrawal is as easy as purchase (Art. 2
-        // Directive (EU) 2023/2673), so there is no separate confirmation step.
-        $requestId = (int) $result->getRequestId();
+        return $result;
+    }
+
+    /**
+     * Send the submission-confirmation notification (and its merchant BCC) for
+     * a successfully created request.
+     *
+     * @param CreateRequestInput $input
+     * @param CreateRequestResult $result
+     * @return void
+     */
+    private function notify(CreateRequestInput $input, CreateRequestResult $result): void
+    {
         $this->notificationSender->send(
             toEmail: $input->customerEmail,
             consumerName: $input->customerName,
             orderIncrementId: $input->orderIncrementId,
-            withdrawalIncrementId: sprintf('%09d', $requestId),
+            withdrawalIncrementId: sprintf('%09d', (int) $result->getRequestId()),
             locale: $this->normaliseLocale($input->locale),
             storeId: (int) $result->getStoreId(),
         );
-
-        $this->withdrawalSession->setLastWithdrawalRequestId($requestId);
-        return UniformResponse::redirect('withdraw-contract/withdraw/success', []);
     }
 
     /**
-     * Normalise locale.
+     * Accept any well-formed `xx_XX` locale tag so multi-language stores get a
+     * localised email; fall back to en_US for anything else (e.g. a store code
+     * passed in by mistake).
      *
      * @param string $input
      * @return string
      */
     private function normaliseLocale(string $input): string
     {
-        $allowed = ['en_US', 'de_DE', 'fr_FR'];
-        return in_array($input, $allowed, true) ? $input : 'en_US';
+        return preg_match('/^[a-z]{2}_[A-Z]{2}$/', $input) === 1 ? $input : 'en_US';
     }
 
     /**

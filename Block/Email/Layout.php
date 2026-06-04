@@ -73,7 +73,21 @@ class Layout extends Template
         }
         $base = $this->_storeManager->getStore($this->resolveStoreId())
             ->getBaseUrl(UrlInterface::URL_TYPE_MEDIA);
-        return rtrim($base, '/') . '/logo/email/' . $logo;
+        return rtrim($base, '/') . '/email/logo/' . $logo;
+    }
+
+    /**
+     * Absolute URL to a bundled raster (PNG) USP / social icon, deployed with
+     * the module to pub/static. Email clients (Gmail, Outlook, Yahoo) strip
+     * inline SVG and data: URIs, so the icons ship as hosted PNG files under
+     * view/frontend/web/email/icons/<code>.png.
+     *
+     * @param string $code
+     * @return string
+     */
+    public function getIconUrl(string $code): string
+    {
+        return $this->getViewFileUrl('MageMe_EUWithdrawal::email/icons/' . $code . '.png');
     }
 
     /**
@@ -106,10 +120,10 @@ class Layout extends Template
     }
 
     /**
-     * Catalogue of bundled USP icons. Codes match
-     * `Model\Config\Source\UspIcon::ICONS` so the admin dropdown stays in
-     * sync with the rendering map. SVGs are stroke-based monochrome at
-     * 24×24 viewBox, rendered at 22×22 in the email at #1a1a1a.
+     * Master vector source for the bundled USP icons; the shipped PNG assets in
+     * view/frontend/web/email/icons/ are rasterised from these. The array keys
+     * are also the valid icon codes (kept in sync with
+     * `Model\Config\Source\UspIcon::ICONS`).
      */
     private const USP_SVGS = [
         'truck'   => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/></svg>',
@@ -128,10 +142,7 @@ class Layout extends Template
 
     /**
      * @return array<int, array{title: string, subtitle: string, icon: string}>
-     *         `icon` is a `data:image/svg+xml;base64,...` URL the phtml drops
-     *         straight into an `<img src>`. Inline SVGs render in Apple Mail,
-     *         iOS, Gmail web/mobile, Outlook web; old Outlook desktop strips
-     *         them and falls back to the alt text.
+     *         `icon` is an absolute URL to a hosted PNG (see getIconUrl).
      */
     public function getUspItems(): array
     {
@@ -156,11 +167,11 @@ class Layout extends Template
                 ScopeInterface::SCOPE_STORE,
                 $this->resolveStoreId(),
             );
-            $svg = self::USP_SVGS[$iconCode] ?? self::USP_SVGS[$fallback[$i]];
+            $code = isset(self::USP_SVGS[$iconCode]) ? $iconCode : $fallback[$i];
             $items[] = [
                 'title'    => $title,
                 'subtitle' => $subtitle,
-                'icon'     => 'data:image/svg+xml;base64,' . base64_encode($svg),
+                'icon'     => $this->getIconUrl($code),
             ];
         }
         return $items;

@@ -149,7 +149,10 @@ class Finalize implements HttpPostActionInterface, CsrfAwareActionInterface
                 itemReasons: $itemReasons,
                 referrerHost: $this->resolveReferrerHost(),
             );
-            $created = $this->requestCreator->create($input);
+            $created = $this->antiEnumeration->process(
+                $input,
+                fn (CreateRequestInput $i) => $this->requestCreator->create($i),
+            );
         } catch (NoEligibleItemsException | ItemCapacityExceededException) {
             return $this->fail($result, (string) __('Some items are no longer eligible. Please reload and try again.'));
         } catch (\Throwable $e) {
@@ -157,14 +160,10 @@ class Finalize implements HttpPostActionInterface, CsrfAwareActionInterface
             return $this->fail($result, (string) __('We could not process your request. Please try again.'));
         }
 
-        if (!$created->isSuccess()) {
+        if ($created === null || !$created->isSuccess()) {
             return $this->uniformFail($result);
         }
 
-        // RequestCreator already persisted the request in the `pending` state
-        // (one transaction, with the frozen receipt + queued send), so there is
-        // nothing left to confirm — withdrawal is as easy as purchase (Art. 2
-        // Directive (EU) 2023/2673).
         return $this->success($result, (int) $created->getRequestId(), $orderIncrementId, $email);
     }
 

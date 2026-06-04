@@ -80,7 +80,7 @@ class DigitalWaiverPreset extends AbstractPreset
         if ($product === null || $item === null) {
             return $decision;
         }
-        if (!$this->detector->isDigitalProduct($product)) {
+        if (!$this->detector->isDigitalItem($item)) {
             return $decision;
         }
 
