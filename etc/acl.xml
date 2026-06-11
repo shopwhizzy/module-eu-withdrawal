@@ -11,10 +11,12 @@
                         </resource>
                     </resource>
                 </resource>
-                <resource id="MageMe_EUWithdrawal::menu" title="EU Withdrawal" sortOrder="100">
-                    <resource id="MageMe_EUWithdrawal::request" title="Withdrawal Requests" sortOrder="10">
-                        <resource id="MageMe_EUWithdrawal::request_view" title="View" sortOrder="10"/>
-                        <resource id="MageMe_EUWithdrawal::request_edit" title="Manage (approve, deny, cancel, comment, refund)" sortOrder="20"/>
+                <resource id="Magento_Sales::sales">
+                    <resource id="MageMe_EUWithdrawal::menu" title="EU Withdrawal" sortOrder="100">
+                        <resource id="MageMe_EUWithdrawal::request" title="Withdrawal Requests" sortOrder="10">
+                            <resource id="MageMe_EUWithdrawal::request_view" title="View" sortOrder="10"/>
+                            <resource id="MageMe_EUWithdrawal::request_edit" title="Manage (approve, deny, cancel, comment, refund)" sortOrder="20"/>
+                        </resource>
                     </resource>
                 </resource>
             </resource>
